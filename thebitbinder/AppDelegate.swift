@@ -8,11 +8,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Initialize memory manager early
         _ = MemoryManager.shared
         
-        // Firebase must configure on the main thread (GULAppDelegateSwizzler touches UIApplication).
-        // Dispatch async so it doesn't block the first frame, but stays on main.
-        DispatchQueue.main.async {
-            FirebaseApp.configure()
-        }
+        // Configure Firebase synchronously on main thread.
+        // Must happen before any Firebase service is accessed.
+        FirebaseApp.configure()
+        
         return true
     }
     
