@@ -12,6 +12,7 @@ import AVFAudio
 struct TalkToTextView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     
     let selectedFolder: JokeFolder?
     
@@ -281,6 +282,9 @@ struct TalkToTextView: View {
             return
         }
         
+        // Stop any prior session first
+        speechRecognizer.stopTranscribing()
+        
         errorMessage = nil
         isRecording = true
         speechRecognizer.startTranscribing()
@@ -339,13 +343,13 @@ class SpeechRecognizer: ObservableObject {
             return
         }
         
-        // Use app-wide audio session (already configured in AppDelegate)
+        // Configure audio session for recording
         let audioSession = AVAudioSession.sharedInstance()
         do {
-            // Just ensure it's active, don't reconfigure
+            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
-            self.error = "Failed to activate audio session"
+            self.error = "Failed to configure audio session: \(error.localizedDescription)"
             return
         }
         
@@ -369,20 +373,32 @@ class SpeechRecognizer: ObservableObject {
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
         
+        // Guard against invalid format (sample rate of 0 on some devices)
+        guard recordingFormat.sampleRate > 0 else {
+            self.error = "Audio input format is invalid. Please check your microphone."
+            return
+        }
+        
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
             self?.recognitionRequest?.append(buffer)
         }
         
         // Start recognition task
         recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { [weak self] result, error in
-            if let error = error {
-                self?.error = error.localizedDescription
-                return
-            }
-            
             if let result = result {
                 DispatchQueue.main.async {
                     self?.transcribedText = result.bestTranscription.formattedString
+                }
+            }
+            
+            if let error = error {
+                let nsError = error as NSError
+                // Ignore cancellation errors (code 216 = user stopped, code 1110 = no speech detected)
+                if nsError.domain == "kAFAssistantErrorDomain" && (nsError.code == 216 || nsError.code == 1110) {
+                    return
+                }
+                DispatchQueue.main.async {
+                    self?.error = error.localizedDescription
                 }
             }
         }
@@ -397,17 +413,18 @@ class SpeechRecognizer: ObservableObject {
     }
     
     func stopTranscribing() {
+        recognitionTask?.finish()
+        recognitionRequest?.endAudio()
+        
         audioEngine?.stop()
         audioEngine?.inputNode.removeTap(onBus: 0)
-        recognitionRequest?.endAudio()
-        recognitionTask?.cancel()
         
         audioEngine = nil
         recognitionRequest = nil
         recognitionTask = nil
         
-        // Deactivate audio session
-        try? AVAudioSession.sharedInstance().setActive(false)
+        // Deactivate audio session safely
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 }
 

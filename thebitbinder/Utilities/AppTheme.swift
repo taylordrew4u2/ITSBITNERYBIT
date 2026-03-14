@@ -79,7 +79,6 @@ struct AppTheme {
         static let brandGradient = LinearGradient(colors: [brand, brandDeep], startPoint: .topLeading, endPoint: .bottomTrailing)
         static let surfaceGradient = LinearGradient(colors: [paperCream, paperAged], startPoint: .top, endPoint: .bottom)
         static let heroGradient    = LinearGradient(colors: [paperCream, surface], startPoint: .top, endPoint: .bottom)
-        static let aiGradient      = LinearGradient(colors: [aiAccent, Color(red: 0.32, green: 0.22, blue: 0.62)], startPoint: .topLeading, endPoint: .bottomTrailing)
         static let leatherGradient = LinearGradient(
             colors: [Color(red: 0.38, green: 0.26, blue: 0.16), Color(red: 0.28, green: 0.18, blue: 0.10)],
             startPoint: .top, endPoint: .bottom
@@ -155,16 +154,6 @@ extension Color {
 }
 
 extension View {
-    /// Add a bottom border line to a view
-    func borderBottom(color: Color = Color(.systemGray3), width: CGFloat = 1) -> some View {
-        VStack(spacing: 0) {
-            self
-            Divider()
-                .background(color)
-                .frame(height: width)
-        }
-    }
-
     /// Make any view feel alive on press — scale down + haptic
     func touchReactive(scale: CGFloat = 0.92, haptic: UIImpactFeedbackGenerator.FeedbackStyle = .light) -> some View {
         self.buttonStyle(TouchReactiveStyle(pressedScale: scale, hapticStyle: haptic))

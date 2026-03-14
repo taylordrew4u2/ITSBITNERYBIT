@@ -137,32 +137,6 @@ struct AIUsageLockedView: View {
     }
 }
 
-// MARK: - Inline Usage Pill (tiny, for toolbars or compact spaces)
-
-/// A small capsule that reads "3 left" in blue, or "0 left" in red.
-struct AIUsagePill: View {
-    @ObservedObject private var tracker = FreeUsageTracker.shared
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: tracker.hasUsesRemaining ? "sparkles" : "lock.fill")
-                .font(.caption2)
-            Text("\(tracker.remaining) left")
-                .font(.caption2)
-                .fontWeight(.semibold)
-        }
-        .foregroundColor(tracker.hasUsesRemaining ? .blue : .red)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(
-            Capsule()
-                .fill(tracker.hasUsesRemaining
-                      ? Color.blue.opacity(0.12)
-                      : Color.red.opacity(0.12))
-        )
-    }
-}
-
 #Preview("Banner — Has Uses") {
     AIUsageBanner()
         .padding()
@@ -170,8 +144,4 @@ struct AIUsagePill: View {
 
 #Preview("Locked View") {
     AIUsageLockedView(featureName: "AI chats")
-}
-
-#Preview("Pill") {
-    AIUsagePill()
 }

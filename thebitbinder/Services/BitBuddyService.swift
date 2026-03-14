@@ -16,9 +16,9 @@ class BitBuddyService: NSObject, ObservableObject {
     static let shared = BitBuddyService()
     
     // MARK: - Configuration
-    private let deepSeekAPI = "https://api.deepseek.com/chat/completions"
-    let apiKey = "sk-668d8403e44e4e7ba36d8f053370790f"
-    let agentId = "deepseek-chat"
+    private let openAIAPI = "https://api.openai.com/v1/chat/completions"
+    let apiKey = "OPENAI_API_KEY_REMOVED"
+    let model = "gpt-4o-mini"
     
     // MARK: - System Prompt
     private let systemPrompt = """
@@ -65,7 +65,7 @@ class BitBuddyService: NSObject, ObservableObject {
         print("🤖 [BitBuddy] Sending message: \(message)")
         
         do {
-            let response = try await callDeepSeekAPI(message)
+            let response = try await callOpenAIAPI(message)
             print("🤖 [BitBuddy] Received response: \(response)")
             return response
         } catch {
@@ -80,10 +80,10 @@ class BitBuddyService: NSObject, ObservableObject {
         isConnected = false
     }
     
-    // MARK: - DeepSeek API Methods
+    // MARK: - OpenAI API Methods
     
-    private func callDeepSeekAPI(_ message: String) async throws -> String {
-        guard let url = URL(string: deepSeekAPI) else {
+    private func callOpenAIAPI(_ message: String) async throws -> String {
+        guard let url = URL(string: openAIAPI) else {
             print("❌ [BitBuddy] Invalid URL")
             throw BitBuddyError.invalidResponse
         }
@@ -95,7 +95,7 @@ class BitBuddyService: NSObject, ObservableObject {
         request.timeoutInterval = 60
         
         let body: [String: Any] = [
-            "model": "deepseek-chat",
+            "model": model,
             "messages": [
                 ["role": "system", "content": systemPrompt],
                 ["role": "user", "content": message]
@@ -261,7 +261,7 @@ class BitBuddyService: NSObject, ObservableObject {
         ["joke1", "joke2", "joke3", ...]
         """
         
-        let response = try await callDeepSeekAPI(prompt)
+        let response = try await callOpenAIAPI(prompt)
         let jokes = try parseJokesFromResponse(response)
         
         print("🤖 [AI Extract] Found \(jokes.count) jokes via AI")
@@ -301,7 +301,7 @@ class BitBuddyService: NSObject, ObservableObject {
         NO other text, ONLY valid JSON.
         """
         
-        let response = try await callDeepSeekAPI(prompt)
+        let response = try await callOpenAIAPI(prompt)
         let analysis = try parseJokeAnalysis(response)
         print("🎭 [Joke Analysis] Category: \(analysis.category), Tags: \(analysis.tags)")
         return analysis
@@ -361,7 +361,7 @@ class BitBuddyService: NSObject, ObservableObject {
         4. Any potential redundancy or similar themes
         """
         
-        return try await callDeepSeekAPI(prompt)
+        return try await callOpenAIAPI(prompt)
     }
     
     // MARK: - Private Parsing Helpers

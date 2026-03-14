@@ -256,7 +256,7 @@ struct AutoOrganizeView: View {
                         .background(Color(.systemGray6))
                         .cornerRadius(8)
                         
-                        Text("Your jokes have been analyzed by Gemini AI and categorized automatically.")
+                        Text("Your jokes have been analyzed by AI and categorized automatically.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)

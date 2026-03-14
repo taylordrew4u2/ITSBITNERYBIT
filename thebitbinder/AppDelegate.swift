@@ -1,6 +1,5 @@
 import UIKit
 import AVFoundation
-import FirebaseCore
 import UserNotifications
 
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -9,8 +8,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         // Initialize memory manager early
         _ = MemoryManager.shared
         
-        // Configure Firebase synchronously on main thread.
-        FirebaseApp.configure()
         
         // Set up snarky notification manager as the UNUserNotificationCenter delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared

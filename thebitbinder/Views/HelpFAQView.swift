@@ -260,7 +260,7 @@ private let allSections: [FAQSectionModel] = [
         FAQItem("Is there a usage limit?",
                 "Free users get a limited number of AI interactions. Sign in to get more uses."),
         FAQItem("Are my conversations saved?",
-                "Yes — conversations are saved to Firebase and restored when you reopen the widget."),
+                "Yes — conversations are saved locally on your device and restored when you reopen the widget."),
     ]),
     FAQSectionModel(title: "Account & Data", icon: "person.circle.fill", items: [
         FAQItem("Do I need an account?",

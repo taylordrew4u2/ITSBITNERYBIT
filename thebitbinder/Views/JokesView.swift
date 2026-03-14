@@ -91,7 +91,7 @@ struct JokesView: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: showHits 
+                                colors: showHits
                                     ? [Color.yellow, Color.orange]
                                     : [Color.yellow.opacity(0.3), Color.orange.opacity(0.2)],
                                 startPoint: .topLeading,
@@ -105,7 +105,7 @@ struct JokesView: View {
                     Image(systemName: showHits ? "star.fill" : "star")
                         .font(.system(size: 28, weight: .semibold))
                         .foregroundStyle(
-                            showHits 
+                            showHits
                                 ? AnyShapeStyle(Color.white)
                                 : AnyShapeStyle(LinearGradient(colors: [.orange, .yellow], startPoint: .top, endPoint: .bottom))
                         )
@@ -414,6 +414,13 @@ struct JokesView: View {
                                 ForEach(filteredJokes) { joke in
                                     NavigationLink(destination: JokeDetailView(joke: joke)) {
                                         JokeCardView(joke: joke)
+                                    }
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            modelContext.delete(joke)
+                                        } label: {
+                                            Label("Delete Joke", systemImage: "trash")
+                                        }
                                     }
                                 }
                             }

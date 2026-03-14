@@ -120,7 +120,7 @@ struct MainTabView: View {
     @State private var selectedScreen: AppScreen = .notepad
     @State private var screenHistory: [AppScreen] = []
     @State private var showMenu = false
-    @State private var showAIWidget = false
+    @State private var showAIChat = false
     @AppStorage("roastModeEnabled") private var roastMode = false
 
     private var canGoBack: Bool { !screenHistory.isEmpty }
@@ -168,21 +168,6 @@ struct MainTabView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Floating AI Widget overlay — drops down from top
-            if showAIWidget {
-                VStack {
-                    HStack {
-                        Spacer()
-                        FloatingAIWidgetView(onDismiss: { showAIWidget = false })
-                            .frame(width: 340, height: 480)
-                            .padding(.trailing, 16)
-                    }
-                    .padding(.top, 110)
-                    Spacer()
-                }
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-
             // Dim overlay when menu is open
             if showMenu {
                 Color.black.opacity(roastMode ? 0.65 : 0.4)
@@ -198,7 +183,7 @@ struct MainTabView: View {
 
             // Side menu
             if showMenu {
-                ModernSideMenu(selectedScreen: $selectedScreen, showMenu: $showMenu, onNavigate: { navigate(to: $0) })
+                ModernSideMenu(selectedScreen: $selectedScreen, showMenu: $showMenu, showAIChat: $showAIChat, onNavigate: { navigate(to: $0) })
                     .transition(.asymmetric(
                         insertion: .move(edge: .trailing).combined(with: .opacity),
                         removal: .move(edge: .trailing).combined(with: .opacity)
@@ -233,24 +218,6 @@ struct MainTabView: View {
 
                         Spacer()
 
-                        // AI button
-                        Button {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                showAIWidget.toggle()
-                            }
-                        } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(AppTheme.Colors.aiGradient)
-                                    .frame(width: 46, height: 46)
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                            .shadow(color: AppTheme.Colors.aiAccent.opacity(0.35), radius: 8, y: 4)
-                        }
-                        .buttonStyle(FABButtonStyle())
-
                         // Menu button
                         Button {
                             dismissKeyboard()
@@ -282,6 +249,11 @@ struct MainTabView: View {
         .onChange(of: roastMode) { _, newValue in
             handleRoastModeChange(isRoast: newValue)
         }
+        .sheet(isPresented: $showAIChat) {
+            NavigationStack {
+                BitBuddyAIChatView()
+            }
+        }
     }
 }
 
@@ -290,6 +262,7 @@ struct MainTabView: View {
 struct ModernSideMenu: View {
     @Binding var selectedScreen: AppScreen
     @Binding var showMenu: Bool
+    @Binding var showAIChat: Bool
     var onNavigate: (AppScreen) -> Void
     @AppStorage("roastModeEnabled") private var roastMode = false
 
@@ -313,6 +286,40 @@ struct ModernSideMenu: View {
                             }
                         }
                     }
+                    
+                    Divider()
+                        .padding(.vertical, 8)
+                    
+                    // BitBuddy AI Chat
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            showMenu = false
+                        }
+                        // Small delay so menu closes before sheet opens
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            showAIChat = true
+                        }
+                    } label: {
+                        HStack(spacing: 14) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(AppTheme.Colors.aiAccent)
+                                .frame(width: 24)
+                            
+                            Text("BitBuddy AI")
+                                .font(.system(size: 16, weight: .regular, design: .serif))
+                                .foregroundColor(roastMode ? Color.white.opacity(0.60) : AppTheme.Colors.textSecondary)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: AppTheme.Radius.medium, style: .continuous)
+                                .fill(Color.clear)
+                        )
+                    }
+                    .buttonStyle(MenuItemStyle(isSelected: false))
                 }
                 .padding(16)
             }

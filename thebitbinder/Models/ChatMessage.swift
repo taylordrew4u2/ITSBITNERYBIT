@@ -6,17 +6,21 @@
 //
 
 import Foundation
+import SwiftData
 
 /// Unified chat message model used across all chat views
-struct ChatMessage: Identifiable, Equatable {
-    let id = UUID()
-    let text: String
-    let isUser: Bool
-    let timestamp: Date
+@Model
+final class ChatMessage {
+    @Attribute(.unique) var id = UUID()
+    var text: String
+    var isUser: Bool
+    var timestamp: Date
+    var conversationId: String
     
-    init(text: String, isUser: Bool) {
+    init(text: String, isUser: Bool, conversationId: String = UUID().uuidString) {
         self.text = text
         self.isUser = isUser
         self.timestamp = Date()
+        self.conversationId = conversationId
     }
 }

@@ -73,7 +73,7 @@
 	<string>Allow speech recognition to transcribe recordings and enable Talk-to-Text joke creation.</string>
 	<key>NSUbiquitousContainers</key>
 	<dict>
-		<key>iCloud.The-BitBinder.thebitbinder</key>
+		<key>iCloud.10Bit</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
 			<false/>
@@ -89,6 +89,7 @@
 		<string>fetch</string>
 		<string>processing</string>
 		<string>remote-notification</string>
+		<string>push-to-talk</string>
 	</array>
 	<key>UIFileSharingEnabled</key>
 	<true/>

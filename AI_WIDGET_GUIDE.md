@@ -1,7 +1,7 @@
 # Floating AI Widget Integration Guide
 
 ## Overview
-The floating AI widget has been successfully integrated into your BitBinder app using ElevenLabs ConvAI technology with **full Firebase Realtime Database persistence and analytics**.
+The floating AI widget has been successfully integrated into your BitBinder app using ElevenLabs ConvAI technology with **full local SwiftData persistence**.
 
 ## Components Added
 

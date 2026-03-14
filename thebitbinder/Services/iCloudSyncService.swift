@@ -32,7 +32,7 @@ final class iCloudSyncService: NSObject, ObservableObject {
     
     // CloudKit container - uses the explicit container ID from entitlements
     private lazy var container: CKContainer = {
-        return CKContainer(identifier: "iCloud.The-BitBinder.thebitbinder")
+        return CKContainer(identifier: "iCloud.10Bit")
     }()
     
     override init() {

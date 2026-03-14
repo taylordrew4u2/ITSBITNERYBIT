@@ -16,6 +16,7 @@ struct JokeDetailView: View {
     @Bindable var joke: Joke
     @State private var isEditing = false
     @State private var showingFolderPicker = false
+    @State private var showingDeleteAlert = false
     
     var body: some View {
         ScrollView {
@@ -44,7 +45,7 @@ struct JokeDetailView: View {
                 Divider()
                 
                 // The Hits Button - prominent at top of metadata
-                Button(action: { 
+                Button(action: {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                         joke.isHit.toggle()
                         joke.dateModified = Date()
@@ -54,58 +55,7 @@ struct JokeDetailView: View {
                         ZStack {
                             Circle()
                                 .fill(
-                                    joke.isHit 
-                                        ? LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                        : LinearGradient(colors: [Color(.systemGray5), Color(.systemGray4)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                )
-                                .frame(width: 44, height: 44)
-                            
-                            Image(systemName: joke.isHit ? "star.fill" : "star")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(joke.isHit ? .white : .gray)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(joke.isHit ? "In The Hits!" : "Add to The Hits")
-                                .font(.headline)
-                                .foregroundColor(joke.isHit ? .orange : .primary)
-                            Text(joke.isHit ? "This joke is perfected and ready" : "Mark as a perfected joke")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
-                        
-                        if joke.isHit {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                                .font(.title2)
-                        }
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(joke.isHit ? Color.yellow.opacity(0.1) : Color(.systemGray6))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(joke.isHit ? Color.orange.opacity(0.3) : Color.clear, lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-                
-                // The Hits Button - prominent at top of metadata
-                Button(action: { 
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        joke.isHit.toggle()
-                        joke.dateModified = Date()
-                    }
-                }) {
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    joke.isHit 
+                                    joke.isHit
                                         ? LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing)
                                         : LinearGradient(colors: [Color(.systemGray5), Color(.systemGray4)], startPoint: .topLeading, endPoint: .bottomTrailing)
                                 )
@@ -176,13 +126,31 @@ struct JokeDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(isEditing ? "Done" : "Edit") {
-                    if isEditing {
-                        joke.dateModified = Date()
+                HStack(spacing: 12) {
+                    Button(isEditing ? "Done" : "Edit") {
+                        if isEditing {
+                            joke.dateModified = Date()
+                        }
+                        isEditing.toggle()
                     }
-                    isEditing.toggle()
+                    
+                    Button(role: .destructive) {
+                        showingDeleteAlert = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                    }
                 }
             }
+        }
+        .alert("Delete Joke", isPresented: $showingDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                modelContext.delete(joke)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to delete \"\(joke.title)\"? This cannot be undone.")
         }
         .sheet(isPresented: $showingFolderPicker) {
             FolderPickerView(selectedFolder: $joke.folder, folders: folders)
