@@ -17,6 +17,7 @@ final class RoastJoke: Identifiable {
     var dateModified: Date = Date()
 
     /// The person this roast is about
+    @Relationship(deleteRule: .noAction)
     var target: RoastTarget?
 
     init(content: String, title: String = "", target: RoastTarget? = nil) {
