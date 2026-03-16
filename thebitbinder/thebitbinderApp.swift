@@ -11,8 +11,9 @@ import SwiftData
 @main
 struct thebitbinderApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @StateObject private var startup = AppStartupCoordinator()
     
-    var sharedModelContainer: ModelContainer = {
+    // ...existing code...
         let schema = Schema([
             Joke.self,
             JokeFolder.self,
@@ -97,7 +98,16 @@ struct thebitbinderApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ZStack {
+                if startup.isReady {
+                    ContentView()
+                } else {
+                    LaunchScreenView(statusText: startup.statusText)
+                }
+            }
+            .task {
+                await startup.start()
+            }
         }
         .modelContainer(sharedModelContainer)
         .onChange(of: scenePhase) { oldPhase, newPhase in

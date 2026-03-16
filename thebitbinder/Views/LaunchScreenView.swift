@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct LaunchScreenView: View {
+    var statusText: String = "Loading..."
+    
     @State private var mark: CGFloat = 0
     @State private var fade: Double  = 0
 
@@ -97,6 +99,12 @@ struct LaunchScreenView: View {
                         .italic()
                         .foregroundColor(AppTheme.Colors.textTertiary)
                         .tracking(0.2)
+                    
+                    // Status text during loading
+                    Text(statusText)
+                        .font(.caption)
+                        .foregroundColor(AppTheme.Colors.textTertiary)
+                        .padding(.top, 8)
                 }
                 .opacity(fade)
             }
@@ -112,4 +120,4 @@ struct LaunchScreenView: View {
     }
 }
 
-#Preview { LaunchScreenView() }
+#Preview { LaunchScreenView(statusText: "Loading...") }
