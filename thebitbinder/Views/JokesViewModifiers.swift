@@ -64,6 +64,9 @@ struct JokesSheetsModifier: ViewModifier {
             }
             .sheet(isPresented: $showingAddRoastTarget) {
                 AddRoastTargetView()
+                    .onAppear {
+                        print("✅ [JokesViewModifiers] AddRoastTargetView sheet appeared")
+                    }
             }
             .sheet(isPresented: $showingMoveJokesSheet) {
                 MoveJokesSheet(

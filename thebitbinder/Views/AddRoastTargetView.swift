@@ -117,11 +117,14 @@ struct AddRoastTargetView: View {
             
             try modelContext.save()
             print("✅ [AddRoastTargetView] Successfully saved: \(target.name) (ID: \(target.id))")
-            dismiss()
+            
+            // Force a brief delay to ensure database write is complete before dismissing
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                dismiss()
+            }
         } catch {
             print("❌ [AddRoastTargetView] Failed to save: \(error)")
             print("❌ [AddRoastTargetView] Error detail: \(String(describing: error))")
-            // Don't dismiss on error so user can see what happened
         }
     }
 }
