@@ -12,8 +12,7 @@ import SwiftData
 struct thebitbinderApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var startup = AppStartupCoordinator()
-    
-    // ...existing code...
+    @StateObject private var userPreferences = UserPreferences()
         let schema = Schema([
             Joke.self,
             JokeFolder.self,
@@ -102,12 +101,13 @@ struct thebitbinderApp: App {
                 if startup.isReady {
                     ContentView()
                 } else {
-                    LaunchScreenView(statusText: startup.statusText)
+                    LaunchScreenView(statusText: startup.statusText, userName: userPreferences.userName)
                 }
             }
             .task {
                 await startup.start()
             }
+            .environmentObject(userPreferences)
         }
         .modelContainer(sharedModelContainer)
         .onChange(of: scenePhase) { oldPhase, newPhase in

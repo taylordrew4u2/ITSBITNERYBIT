@@ -15,6 +15,7 @@ struct SettingsView: View {
     @Query private var jokes: [Joke]
     @Query private var recordings: [Recording]
     @Query private var roastTargets: [RoastTarget]
+    @EnvironmentObject private var userPreferences: UserPreferences
     
     
     @State private var isExportingJokes = false
@@ -40,6 +41,32 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                // MARK: - Profile
+                Section {
+                    HStack {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Name")
+                                    .foregroundColor(.primary)
+                                Text("Displayed on launch screen")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "person.fill")
+                                .foregroundColor(.blue)
+                        }
+                        
+                        Spacer()
+                        
+                        TextField("Your name", text: $userPreferences.userName)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: 120)
+                    }
+                } header: {
+                    Text("Profile")
+                }
+                
                 // MARK: - Layout
                 Section {
                     Button {

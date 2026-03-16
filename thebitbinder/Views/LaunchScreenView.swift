@@ -9,6 +9,7 @@ import SwiftUI
 
 struct LaunchScreenView: View {
     var statusText: String = "Loading..."
+    var userName: String = "there"
     
     @State private var mark: CGFloat = 0
     @State private var fade: Double  = 0
@@ -100,11 +101,18 @@ struct LaunchScreenView: View {
                         .foregroundColor(AppTheme.Colors.textTertiary)
                         .tracking(0.2)
                     
-                    // Status text during loading
-                    Text(statusText)
+                    // Personalized greeting
+                    Text("Welcome back, \(userName)")
                         .font(.caption)
                         .foregroundColor(AppTheme.Colors.textTertiary)
-                        .padding(.top, 8)
+                        .padding(.top, 12)
+                    
+                    // Status text during loading
+                    Text(statusText)
+                        .font(.caption2)
+                        .foregroundColor(AppTheme.Colors.textTertiary)
+                        .opacity(0.7)
+                        .padding(.top, 4)
                 }
                 .opacity(fade)
             }
