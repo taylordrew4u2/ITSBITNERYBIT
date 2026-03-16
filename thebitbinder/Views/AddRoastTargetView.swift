@@ -90,6 +90,10 @@ struct AddRoastTargetView: View {
                     }
                 }
             }
+            .onAppear {
+                print("📋 [AddRoastTargetView] View appeared")
+                print("📋 [AddRoastTargetView] ModelContext available: \(modelContext)")
+            }
         }
     }
 
@@ -103,14 +107,21 @@ struct AddRoastTargetView: View {
             photoData: photoData
         )
         
+        print("📝 [AddRoastTargetView] Creating target: \(target.name)")
+        print("📝 [AddRoastTargetView] Target ID: \(target.id)")
+        print("📝 [AddRoastTargetView] Model context: \(modelContext)")
+        
         do {
             modelContext.insert(target)
+            print("📝 [AddRoastTargetView] Inserted into context")
+            
             try modelContext.save()
-            print("✅ [RoastTarget] Saved: \(target.name) (ID: \(target.id))")
+            print("✅ [AddRoastTargetView] Successfully saved: \(target.name) (ID: \(target.id))")
             dismiss()
         } catch {
-            print("❌ [RoastTarget] Failed to save: \(error)")
-            print("❌ [RoastTarget] Error detail: \(String(describing: error))")
+            print("❌ [AddRoastTargetView] Failed to save: \(error)")
+            print("❌ [AddRoastTargetView] Error detail: \(String(describing: error))")
+            // Don't dismiss on error so user can see what happened
         }
     }
 }
