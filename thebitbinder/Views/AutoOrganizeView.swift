@@ -72,60 +72,60 @@ struct AutoOrganizeView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .background(
                                     LinearGradient(
-                                            gradient: Gradient(colors: [.purple.opacity(0.8), .purple.opacity(0.6)]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
+                                        gradient: Gradient(colors: [.purple.opacity(0.8), .purple.opacity(0.6)]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
                                     )
-                                    .cornerRadius(10)
-                                    
-                                    // Auto-Organize Button
-                                    Button(action: performAutoOrganize) {
-                                        if isAnalyzing {
-                                            HStack(spacing: 12) {
-                                                ProgressView()
-                                                    .tint(.white)
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text("Analyzing...")
-                                                        .font(.headline)
-                                                    Text("\(analysisProgress)/\(analysisTotal) jokes analyzed")
-                                                        .font(.caption)
-                                                        .foregroundColor(.white.opacity(0.8))
-                                                }
-                                                Spacer()
+                                )
+                                .cornerRadius(10)
+                                
+                                // Auto-Organize Button
+                                Button(action: performAutoOrganize) {
+                                    if isAnalyzing {
+                                        HStack(spacing: 12) {
+                                            ProgressView()
+                                                .tint(.white)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text("Analyzing...")
+                                                    .font(.headline)
+                                                Text("\(analysisProgress)/\(analysisTotal) jokes analyzed")
+                                                    .font(.caption)
+                                                    .foregroundColor(.white.opacity(0.8))
                                             }
-                                        } else {
-                                            HStack(spacing: 12) {
-                                                Image(systemName: "wand.and.stars")
-                                                    .font(.system(size: 16, weight: .semibold))
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text("Smart Auto-Organize")
-                                                        .font(.headline)
-                                                    Text(customFolders.isEmpty ? "AI will create folders" : "Using \(customFolders.count) custom folders")
-                                                        .font(.caption)
-                                                        .foregroundColor(.white.opacity(0.8))
-                                                }
-                                                Spacer()
-                                                Image(systemName: "chevron.right")
-                                                    .font(.system(size: 14, weight: .semibold))
+                                            Spacer()
+                                        }
+                                    } else {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: "wand.and.stars")
+                                                .font(.system(size: 16, weight: .semibold))
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text("Smart Auto-Organize")
+                                                    .font(.headline)
+                                                Text(customFolders.isEmpty ? "AI will create folders" : "Using \(customFolders.count) custom folders")
+                                                    .font(.caption)
+                                                    .foregroundColor(.white.opacity(0.8))
                                             }
+                                            Spacer()
+                                            Image(systemName: "chevron.right")
+                                                .font(.system(size: 14, weight: .semibold))
                                         }
                                     }
-                                    .disabled(isAnalyzing)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(
-                                        LinearGradient(
-                                            gradient: Gradient(colors: [.blue.opacity(0.8), .blue.opacity(0.6)]),
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .cornerRadius(10)
                                 }
-                                .padding()
+                                .disabled(isAnalyzing)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [.blue.opacity(0.8), .blue.opacity(0.6)]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .cornerRadius(10)
+                            }
+                            .padding()
                         }
                         
                         // Unorganized Jokes Section
