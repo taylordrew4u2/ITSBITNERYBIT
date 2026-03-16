@@ -12,6 +12,8 @@ import PhotosUI
 
 struct RoastTargetDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("expandAllJokes") private var expandAllJokes = false
     @Bindable var target: RoastTarget
 
     @State private var showingAddRoast = false
@@ -19,6 +21,7 @@ struct RoastTargetDetailView: View {
     @State private var showingEditTarget = false
     @State private var showingTalkToText = false
     @State private var showingRecordingSheet = false
+    @State private var showingDeleteTargetAlert = false
     @State private var searchText = ""
 
     private let accentColor = AppTheme.Colors.roastAccent
@@ -131,6 +134,10 @@ struct RoastTargetDetailView: View {
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
+                    Button(action: { expandAllJokes.toggle() }) {
+                        Label(expandAllJokes ? "Collapse Roasts" : "Expand Roasts", systemImage: expandAllJokes ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left")
+                    }
+                    Divider()
                     Button(action: { showingAddRoast = true }) {
                         Label("Add Manually", systemImage: "square.and.pencil")
                     }
@@ -141,10 +148,24 @@ struct RoastTargetDetailView: View {
                     Button(action: { showingRecordingSheet = true }) {
                         Label("Record Set", systemImage: "record.circle")
                     }
+                    Divider()
+                    Button(role: .destructive, action: { showingDeleteTargetAlert = true }) {
+                        Label("Delete Target", systemImage: "trash")
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
             }
+        }
+        .alert("Delete \(target.name)?", isPresented: $showingDeleteTargetAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Delete", role: .destructive) {
+                modelContext.delete(target)
+                try? modelContext.save()
+                dismiss()
+            }
+        } message: {
+            Text("This will permanently delete \(target.name) and all \(target.jokeCount) roast\(target.jokeCount == 1 ? "" : "s"). This cannot be undone.")
         }
         .sheet(isPresented: $showingAddRoast) {
             AddRoastJokeView(target: target)
@@ -177,6 +198,7 @@ struct RoastTargetDetailView: View {
 
 struct RoastJokeRow: View {
     let joke: RoastJoke
+    @AppStorage("expandAllJokes") private var expandAllJokes = false
     private let accentColor = AppTheme.Colors.roastAccent
 
     var body: some View {
@@ -194,7 +216,7 @@ struct RoastJokeRow: View {
                 Text(joke.content)
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
-                    .lineLimit(3)
+                    .lineLimit(expandAllJokes ? nil : 3)
                 Text(joke.dateCreated, format: .dateTime.month(.abbreviated).day())
                     .font(.caption2)
                     .foregroundStyle(.tertiary)

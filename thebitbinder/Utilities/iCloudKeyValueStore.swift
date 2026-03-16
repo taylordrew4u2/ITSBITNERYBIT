@@ -11,16 +11,18 @@ import Combine
 
 /// Keys that should be synced to iCloud across devices
 enum SyncedKeys {
-    static let notepadText      = "notepadText"
-    static let roastModeEnabled = "roastModeEnabled"
-    static let tabOrder         = "tabOrder"
-    static let jokesViewMode    = "jokesViewMode"
+    static let notepadText       = "notepadText"
+    static let roastModeEnabled  = "roastModeEnabled"
+    static let roastViewMode     = "roastViewMode"
+    static let tabOrder          = "tabOrder"
+    static let jokesViewMode     = "jokesViewMode"
     static let iCloudSyncEnabled = "iCloudSyncEnabled"
     
     /// All keys that should be mirrored between UserDefaults and iCloud KV store
     static let all: [String] = [
         notepadText,
         roastModeEnabled,
+        roastViewMode,
         tabOrder,
         jokesViewMode,
         iCloudSyncEnabled,
@@ -29,11 +31,17 @@ enum SyncedKeys {
 
 /// Singleton that keeps UserDefaults and NSUbiquitousKeyValueStore in sync.
 /// On launch it pulls from iCloud → local. On local writes it pushes to iCloud.
+/// Also observes UserDefaults so @AppStorage changes are pushed automatically.
 final class iCloudKeyValueStore {
     static let shared = iCloudKeyValueStore()
     
     private let cloud = NSUbiquitousKeyValueStore.default
     private let local = UserDefaults.standard
+    /// Prevents feedback loops when pulling from cloud triggers local observation
+    private var isSyncing = false
+    
+    /// Performance: Debounce sync operations
+    private var syncDebounceWorkItem: DispatchWorkItem?
     
     private init() {
         // Listen for remote changes pushed from other devices
@@ -42,6 +50,15 @@ final class iCloudKeyValueStore {
             selector: #selector(cloudDidChange(_:)),
             name: NSUbiquitousKeyValueStore.didChangeExternallyNotification,
             object: cloud
+        )
+        
+        // Watch for ANY UserDefaults change and auto-push synced keys to iCloud
+        // This catches @AppStorage writes which bypass our set() methods
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(defaultsDidChange),
+            name: UserDefaults.didChangeNotification,
+            object: nil
         )
         
         // Trigger initial sync from iCloud
@@ -93,10 +110,68 @@ final class iCloudKeyValueStore {
         cloud.data(forKey: key) ?? local.data(forKey: key)
     }
     
+    // MARK: - Auto-push on UserDefaults change
+    
+    /// Called whenever ANY UserDefaults key changes (including @AppStorage)
+    @objc private func defaultsDidChange() {
+        guard !isSyncing else { return }  // Don't push back what we just pulled
+        
+        // Performance: Debounce sync operations to prevent excessive iCloud calls
+        syncDebounceWorkItem?.cancel()
+        syncDebounceWorkItem = DispatchWorkItem { [weak self] in
+            self?.performSyncToCloud()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: syncDebounceWorkItem!)
+    }
+    
+    /// Performs the actual sync to iCloud (debounced)
+    private func performSyncToCloud() {
+        guard !isSyncing else { return }
+        
+        var changed = false
+        for key in SyncedKeys.all {
+            let localValue = local.object(forKey: key)
+            let cloudValue = cloud.object(forKey: key)
+            
+            // Compare and push if different
+            if !valuesEqual(localValue, cloudValue) {
+                if let val = localValue {
+                    cloud.set(val, forKey: key)
+                } else {
+                    cloud.removeObject(forKey: key)
+                }
+                changed = true
+            }
+        }
+        
+        if changed {
+            cloud.synchronize()
+        }
+    }
+    
+    /// Simple equality check for plist-compatible values
+    private func valuesEqual(_ a: Any?, _ b: Any?) -> Bool {
+        switch (a, b) {
+        case (nil, nil): return true
+        case (nil, _), (_, nil): return false
+        case let (a as String, b as String): return a == b
+        case let (a as Bool, b as Bool): return a == b
+        case let (a as Int, b as Int): return a == b
+        case let (a as Double, b as Double): return a == b
+        case let (a as Data, b as Data): return a == b
+        default:
+            // Fallback: compare descriptions
+            return String(describing: a) == String(describing: b)
+        }
+    }
+    
     // MARK: - Pull (iCloud → local)
     
     /// Pull all synced keys from iCloud into UserDefaults
     func pullFromCloud() {
+        isSyncing = true
+        defer { isSyncing = false }
+        
         for key in SyncedKeys.all {
             if let cloudValue = cloud.object(forKey: key) {
                 local.set(cloudValue, forKey: key)
@@ -128,6 +203,9 @@ final class iCloudKeyValueStore {
         // Only process server changes and initial syncs
         if reason == NSUbiquitousKeyValueStoreServerChange ||
            reason == NSUbiquitousKeyValueStoreInitialSyncChange {
+            
+            isSyncing = true
+            defer { isSyncing = false }
             
             let changedKeys = userInfo[NSUbiquitousKeyValueStoreChangedKeysKey] as? [String] ?? []
             

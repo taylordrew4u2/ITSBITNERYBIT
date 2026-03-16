@@ -23,6 +23,9 @@ struct thebitbinderApp: App {
             RoastJoke.self,
             ChatMessage.self,
             BrainstormIdea.self,
+            ImportBatch.self,
+            ImportedJokeMetadata.self,
+            UnresolvedImportFragment.self,
         ])
 
         // Store URL — all fallback paths use the same file so data is never orphaned
@@ -39,7 +42,7 @@ struct thebitbinderApp: App {
             )
             let container = try ModelContainer(for: schema, configurations: [config])
             print("✅ [ModelContainer] Persistent + CloudKit ready at \(storeURL.path)")
-            print("✅ [ModelContainer] Schema models: Joke, JokeFolder, Recording, SetList, NotebookPhotoRecord, RoastTarget, RoastJoke, ChatMessage, BrainstormIdea")
+            print("✅ [ModelContainer] Schema models: Joke, JokeFolder, Recording, SetList, NotebookPhotoRecord, RoastTarget, RoastJoke, ChatMessage, BrainstormIdea, ImportBatch, ImportedJokeMetadata, UnresolvedImportFragment")
             return container
         } catch {
             print("⚠️ [ModelContainer] CloudKit store failed: \(error)")
@@ -103,6 +106,7 @@ struct thebitbinderApp: App {
                 iCloudKeyValueStore.shared.pushToCloud()
             } else if newPhase == .active {
                 iCloudKeyValueStore.shared.pullFromCloud()
+                NotificationManager.shared.scheduleIfNeeded()
             }
         }
     }

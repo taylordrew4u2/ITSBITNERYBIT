@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Joke {
+final class Joke: Identifiable {
     var id: UUID = UUID()
     var content: String = ""
     var title: String = ""

@@ -13,6 +13,7 @@ struct AddJokesToSetListView: View {
     @Environment(\.dismiss) private var dismiss
     @Query private var jokes: [Joke]
     @Query private var folders: [JokeFolder]
+    @AppStorage("roastModeEnabled") private var roastMode = false
     
     @Bindable var setList: SetList
     var currentJokeIDs: [UUID]
@@ -110,14 +111,19 @@ struct AddJokesToSetListView: View {
                     }
                 }
             }
-            .navigationTitle("Add Jokes")
+            .background(roastMode ? AppTheme.Colors.roastBackground : Color.clear)
+            .navigationTitle(roastMode ? "🔥 Add Jokes" : "Add Jokes")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(roastMode ? AppTheme.Colors.roastSurface : AppTheme.Colors.paperCream, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(roastMode ? .dark : .light, for: .navigationBar)
             .searchable(text: $searchText, prompt: "Search jokes")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(roastMode ? AppTheme.Colors.roastAccent : nil)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -125,9 +131,11 @@ struct AddJokesToSetListView: View {
                         addJokes()
                     }
                     .disabled(selectedJokeIDs.isEmpty)
+                    .foregroundColor(roastMode ? AppTheme.Colors.roastAccent : nil)
                 }
             }
         }
+        .tint(roastMode ? AppTheme.Colors.roastAccent : AppTheme.Colors.inkBlue)
     }
     
     private func addJokes() {

@@ -12,6 +12,7 @@ struct AddJokeView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var folders: [JokeFolder]
+    @AppStorage("roastModeEnabled") private var roastMode = false
     
     @State private var title = ""
     @State private var content = ""
@@ -41,13 +42,19 @@ struct AddJokeView: View {
                     }
                 }
             }
+            .scrollContentBackground(roastMode ? .hidden : .visible)
+            .background(roastMode ? AppTheme.Colors.roastBackground : Color.clear)
             .navigationTitle("New Joke")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(roastMode ? AppTheme.Colors.roastSurface : AppTheme.Colors.paperCream, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(roastMode ? .dark : .light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(roastMode ? AppTheme.Colors.roastAccent : nil)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -55,9 +62,11 @@ struct AddJokeView: View {
                         saveJoke()
                     }
                     .disabled(content.isEmpty)
+                    .foregroundColor(roastMode ? AppTheme.Colors.roastAccent : nil)
                 }
             }
         }
+        .tint(roastMode ? AppTheme.Colors.roastAccent : AppTheme.Colors.inkBlue)
     }
     
     private func saveJoke() {

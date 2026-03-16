@@ -99,7 +99,7 @@ struct FAQSection: View {
             VStack(spacing: 2) {
                 ForEach(section.items) { item in
                     FAQRow(item: item, isExpanded: expandedItem == item.id, roastMode: roastMode, accent: accent) {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        withAnimation(.easeOut(duration: 0.2)) {
                             expandedItem = expandedItem == item.id ? nil : item.id
                         }
                     }

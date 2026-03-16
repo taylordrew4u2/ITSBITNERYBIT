@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class BrainstormIdea {
+final class BrainstormIdea: Identifiable {
     var id: UUID = UUID()
     var content: String = ""
     var dateCreated: Date = Date()

@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Recording {
+final class Recording: Identifiable {
     var id: UUID = UUID()
     var name: String = ""
     var dateCreated: Date = Date()

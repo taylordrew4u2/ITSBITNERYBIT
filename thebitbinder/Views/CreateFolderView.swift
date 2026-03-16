@@ -11,6 +11,7 @@ import SwiftData
 struct CreateFolderView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("roastModeEnabled") private var roastMode = false
     
     @State private var folderName = ""
     
@@ -21,13 +22,19 @@ struct CreateFolderView: View {
                     TextField("Enter folder name", text: $folderName)
                 }
             }
-            .navigationTitle("New Folder")
+            .scrollContentBackground(roastMode ? .hidden : .visible)
+            .background(roastMode ? AppTheme.Colors.roastBackground : Color.clear)
+            .navigationTitle(roastMode ? "🔥 New Folder" : "New Folder")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(roastMode ? AppTheme.Colors.roastSurface : AppTheme.Colors.paperCream, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(roastMode ? .dark : .light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
+                    .foregroundColor(roastMode ? AppTheme.Colors.roastAccent : nil)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -35,9 +42,11 @@ struct CreateFolderView: View {
                         createFolder()
                     }
                     .disabled(folderName.isEmpty)
+                    .foregroundColor(roastMode ? AppTheme.Colors.roastAccent : nil)
                 }
             }
         }
+        .tint(roastMode ? AppTheme.Colors.roastAccent : AppTheme.Colors.inkBlue)
     }
     
     private func createFolder() {

@@ -12,12 +12,26 @@ import Foundation
 final class MemoryManager {
     static let shared = MemoryManager()
     
+    /// Track if we're currently clearing caches to avoid duplicate work
+    private var isClearing = false
+    private let clearingLock = NSLock()
+    
+    /// Observers for cleanup
+    private var memoryWarningObserver: NSObjectProtocol?
+    private var backgroundObserver: NSObjectProtocol?
+    private var foregroundObserver: NSObjectProtocol?
+    
     private init() {
-        setupMemoryWarningObserver()
+        setupObservers()
     }
     
-    private func setupMemoryWarningObserver() {
-        NotificationCenter.default.addObserver(
+    deinit {
+        removeObservers()
+    }
+    
+    private func setupObservers() {
+        // Memory warning - highest priority
+        memoryWarningObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didReceiveMemoryWarningNotification,
             object: nil,
             queue: .main
@@ -25,35 +39,66 @@ final class MemoryManager {
             self?.handleMemoryWarning()
         }
         
-        NotificationCenter.default.addObserver(
+        // Background transition - clear caches to reduce footprint
+        backgroundObserver = NotificationCenter.default.addObserver(
             forName: UIApplication.didEnterBackgroundNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             self?.handleBackgroundTransition()
         }
+        
+        // Foreground transition - good time to report memory state
+        foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleForegroundTransition()
+        }
+    }
+    
+    private func removeObservers() {
+        if let observer = memoryWarningObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = backgroundObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        if let observer = foregroundObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
     
     /// Called when system sends memory warning
     func handleMemoryWarning() {
+        // Prevent duplicate clearing
+        clearingLock.lock()
+        guard !isClearing else {
+            clearingLock.unlock()
+            return
+        }
+        isClearing = true
+        clearingLock.unlock()
+        
         print("⚠️ [MemoryManager] Memory warning received - clearing caches")
         
-        // Perform cache clearing off the main thread to avoid UI hangs
-        DispatchQueue.global(qos: .utility).async {
+        // Clear caches on main thread (NSCache is thread-safe but UI-related caches should be on main)
+        DispatchQueue.main.async { [weak self] in
             // Clear image caches
             ImageCache.shared.clearCache()
             
             // Clear URL caches
             URLCache.shared.removeAllCachedResponses()
             
-            // Force a garbage collection hint
-            autoreleasepool { }
+            // Notify listeners
+            NotificationCenter.default.post(name: .appMemoryWarning, object: nil)
             
-            // Notify listeners on the main thread
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .appMemoryWarning, object: nil)
-                print("✅ [MemoryManager] Caches cleared")
-            }
+            print("✅ [MemoryManager] Caches cleared")
+            
+            self?.clearingLock.lock()
+            self?.isClearing = false
+            self?.clearingLock.unlock()
         }
     }
     
@@ -61,14 +106,16 @@ final class MemoryManager {
     func handleBackgroundTransition() {
         print("📱 [MemoryManager] App entering background - reducing memory footprint")
         
-        // Perform cache clearing off the main thread
-        DispatchQueue.global(qos: .utility).async {
-            // Clear image cache to free memory while in background
-            ImageCache.shared.clearCache()
-            
-            // Clear URL cache
-            URLCache.shared.removeAllCachedResponses()
-        }
+        // Clear caches immediately on main thread
+        ImageCache.shared.clearCache()
+        URLCache.shared.removeAllCachedResponses()
+    }
+    
+    /// Called when app enters foreground
+    private func handleForegroundTransition() {
+        #if DEBUG
+        reportMemoryUsage()
+        #endif
     }
     
     /// Call this to proactively reduce memory usage
@@ -91,6 +138,25 @@ final class MemoryManager {
             let usedMB = Double(info.resident_size) / 1024.0 / 1024.0
             print("📊 [MemoryManager] Memory usage: \(String(format: "%.1f", usedMB)) MB")
         }
+    }
+    
+    /// Check if memory pressure is high (useful for deciding whether to load large assets)
+    func isMemoryPressureHigh() -> Bool {
+        var info = mach_task_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size)/4
+        
+        let kerr: kern_return_t = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: 1) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        
+        if kerr == KERN_SUCCESS {
+            let usedMB = Double(info.resident_size) / 1024.0 / 1024.0
+            // Consider memory pressure high if using more than 200MB
+            return usedMB > 200
+        }
+        return false
     }
 }
 

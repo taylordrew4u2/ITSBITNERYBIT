@@ -26,6 +26,7 @@ struct JokesView: View {
     
     @AppStorage("jokesViewMode") private var viewMode: JokesViewMode = .grid
     @AppStorage("roastViewMode") private var roastViewMode: JokesViewMode = .list
+    @AppStorage("expandAllJokes") private var expandAllJokes = false
     
     @State private var showingAddJoke = false
     @State private var showingScanner = false
@@ -61,6 +62,12 @@ struct JokesView: View {
     @State private var importedJokeNames: [String] = []
     @State private var importFileCount = 0
     @State private var importFileIndex = 0
+    
+    // Performance: Debounced search and cached filtered results
+    @State private var debouncedSearchText = ""
+    @State private var searchDebounceTask: Task<Void, Never>?
+    @State private var cachedFilteredJokes: [Joke] = []
+    @State private var needsFilterRefresh = true
 
     // MARK: - The Hits Button
     
@@ -275,19 +282,25 @@ struct JokesView: View {
 
     
     var filteredJokes: [Joke] {
+        // Return cached result if available and no refresh needed
+        if !needsFilterRefresh && !cachedFilteredJokes.isEmpty {
+            return cachedFilteredJokes
+        }
+        
         // Start with base jokes depending on selected filter
         let base: [Joke]
         if showRecentlyAdded {
             let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
             base = jokes.filter { $0.dateCreated >= sevenDaysAgo }
         } else if let folder = selectedFolder {
-            base = jokes.filter { $0.folder?.id == folder.id }
+            let folderId = folder.id
+            base = jokes.filter { $0.folder?.id == folderId }
         } else {
             base = jokes
         }
         
-        // Apply search filter if needed
-        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Apply search filter if needed - use debounced text
+        let trimmed = debouncedSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
         let filtered: [Joke]
         if trimmed.isEmpty {
             filtered = base
@@ -362,6 +375,22 @@ struct JokesView: View {
                     modelContext: modelContext
                 ))
                 .overlay { importOverlay }
+                // Performance: Debounce search text updates
+                .onChange(of: searchText) { _, newValue in
+                    searchDebounceTask?.cancel()
+                    searchDebounceTask = Task {
+                        try? await Task.sleep(nanoseconds: 250_000_000) // 250ms debounce
+                        guard !Task.isCancelled else { return }
+                        await MainActor.run {
+                            debouncedSearchText = newValue
+                            needsFilterRefresh = true
+                        }
+                    }
+                }
+                // Invalidate cache when filter criteria change
+                .onChange(of: selectedFolder) { _, _ in needsFilterRefresh = true }
+                .onChange(of: showRecentlyAdded) { _, _ in needsFilterRefresh = true }
+                .onChange(of: jokes.count) { _, _ in needsFilterRefresh = true }
         }
     }
 
@@ -455,6 +484,9 @@ struct JokesView: View {
                         }
                         Button(action: { showingImportHistory = true }) {
                             Label("Import History", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                        }
+                        Button(action: { expandAllJokes.toggle() }) {
+                            Label(expandAllJokes ? "Collapse Content" : "Expand Content", systemImage: expandAllJokes ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left")
                         }
                         Button(action: exportJokesToPDF) {
                             Label("Export to PDF", systemImage: "square.and.arrow.up")
@@ -586,6 +618,9 @@ struct JokesView: View {
                         importStatusMessage = "Found \(extractedJokes.count) jokes, adding..."
                     }
                     
+                    // Performance: Batch all joke insertions then save once
+                    var jokesToCategorize: [(Joke, String)] = []
+                    
                     for jokeText in extractedJokes {
                         let trimmed = jokeText.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard trimmed.count >= 3 else { continue }
@@ -594,31 +629,35 @@ struct JokesView: View {
                         await MainActor.run {
                             let joke = Joke(content: trimmed, title: title, folder: self.selectedFolder)
                             self.modelContext.insert(joke)
-                            try? self.modelContext.save()
+                            jokesToCategorize.append((joke, trimmed))
                             self.importedJokeNames.append(title)
                             self.importStatusMessage = "Added \(self.importedJokeNames.count) jokes..."
                         }
-                        
-                        // Background categorization
-                        let content = trimmed
+                    }
+                    
+                    // Save all jokes in one batch
+                    await MainActor.run {
+                        try? self.modelContext.save()
+                    }
+                    
+                    // Background categorization after batch save
+                    for (joke, content) in jokesToCategorize {
                         Task.detached {
                             do {
                                 let analysis = try await BitBuddyService.shared.analyzeJoke(content)
                                 await MainActor.run {
-                                    if let joke = self.jokes.first(where: { $0.content == content }) {
-                                        joke.category = analysis.category
-                                        joke.tags = analysis.tags
-                                        joke.difficulty = analysis.difficulty
-                                        joke.humorRating = analysis.humorRating
-                                        
-                                        var folder = self.folders.first(where: { $0.name == analysis.category })
-                                        if folder == nil {
-                                            folder = JokeFolder(name: analysis.category)
-                                            self.modelContext.insert(folder!)
-                                        }
-                                        joke.folder = folder
-                                        try? self.modelContext.save()
+                                    joke.category = analysis.category
+                                    joke.tags = analysis.tags
+                                    joke.difficulty = analysis.difficulty
+                                    joke.humorRating = analysis.humorRating
+                                    
+                                    var folder = self.folders.first(where: { $0.name == analysis.category })
+                                    if folder == nil {
+                                        folder = JokeFolder(name: analysis.category)
+                                        self.modelContext.insert(folder!)
                                     }
+                                    joke.folder = folder
+                                    // Note: Don't save after each categorization - let SwiftData auto-save
                                 }
                             } catch { }
                         }
@@ -628,6 +667,8 @@ struct JokesView: View {
                 }
             }
             await MainActor.run {
+                // Final save after all categorizations
+                try? self.modelContext.save()
                 isProcessingImages = false
                 importStatusMessage = ""
                 importedJokeNames = []
@@ -665,6 +706,9 @@ struct JokesView: View {
                     
                     let extractedJokes = try await extractionService.extractJokes(from: text)
                     
+                    // Performance: Batch all insertions
+                    var jokesToCategorize: [(Joke, String)] = []
+                    
                     for jokeText in extractedJokes {
                         let trimmed = jokeText.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard trimmed.count >= 3 else { continue }
@@ -677,35 +721,38 @@ struct JokesView: View {
                             await MainActor.run {
                                 let joke = Joke(content: trimmed, title: title, folder: self.selectedFolder)
                                 self.modelContext.insert(joke)
-                                try? self.modelContext.save()
+                                jokesToCategorize.append((joke, trimmed))
                                 self.importedJokeNames.append(title)
                                 self.importStatusMessage = "Added \(self.importedJokeNames.count) jokes..."
                             }
                             added += 1
-                            
-                            // Background categorization
-                            let content = trimmed
-                            Task.detached {
-                                do {
-                                    let analysis = try await BitBuddyService.shared.analyzeJoke(content)
-                                    await MainActor.run {
-                                        if let joke = self.jokes.first(where: { $0.content == content }) {
-                                            joke.category = analysis.category
-                                            joke.tags = analysis.tags
-                                            joke.difficulty = analysis.difficulty
-                                            joke.humorRating = analysis.humorRating
-                                            
-                                            var folder = self.folders.first(where: { $0.name == analysis.category })
-                                            if folder == nil {
-                                                folder = JokeFolder(name: analysis.category)
-                                                self.modelContext.insert(folder!)
-                                            }
-                                            joke.folder = folder
-                                            try? self.modelContext.save()
-                                        }
+                        }
+                    }
+                    
+                    // Batch save all jokes from this photo
+                    await MainActor.run {
+                        try? self.modelContext.save()
+                    }
+                    
+                    // Background categorization after save
+                    for (joke, content) in jokesToCategorize {
+                        Task.detached {
+                            do {
+                                let analysis = try await BitBuddyService.shared.analyzeJoke(content)
+                                await MainActor.run {
+                                    joke.category = analysis.category
+                                    joke.tags = analysis.tags
+                                    joke.difficulty = analysis.difficulty
+                                    joke.humorRating = analysis.humorRating
+                                    
+                                    var folder = self.folders.first(where: { $0.name == analysis.category })
+                                    if folder == nil {
+                                        folder = JokeFolder(name: analysis.category)
+                                        self.modelContext.insert(folder!)
                                     }
-                                } catch { }
-                            }
+                                    joke.folder = folder
+                                }
+                            } catch { }
                         }
                     }
                 } catch {
@@ -714,6 +761,8 @@ struct JokesView: View {
             }
         }
         await MainActor.run {
+            // Final save for any remaining categorizations
+            try? self.modelContext.save()
             importSummary = (added, skipped)
             showingImportSummary = true
             possibleDuplicates = duplicates
@@ -768,6 +817,7 @@ struct JokesView: View {
                         importStatusMessage = "Adding \(batch.importedRecords.count) imported items..."
                     }
                     
+                    // Performance: Batch all insertions for this file
                     for record in batch.importedRecords.sorted(by: { $0.sourceOrder < $1.sourceOrder }) {
                         let combinedContent = [record.body, record.notes]
                             .filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
@@ -805,7 +855,6 @@ struct JokesView: View {
                             )
                             self.modelContext.insert(metadata)
                             
-                            try? self.modelContext.save()
                             self.importedJokeNames.append(title)
                             self.importStatusMessage = "Added \(self.importedJokeNames.count) jokes..."
                         }
@@ -856,13 +905,15 @@ struct JokesView: View {
                             )
                             self.modelContext.insert(unresolvedModel)
                             persistedUnresolvedForBatch.append(unresolvedModel)
-                             
-                            try? self.modelContext.save()
+                            
                             self.importedJokeNames.append(title)
                         }
                         totalAdded += 1
                     }
+                    
+                    // Performance: Save all records for this file in one batch
                     await MainActor.run {
+                        try? self.modelContext.save()
                         unresolvedImportFragments.append(contentsOf: persistedUnresolvedForBatch)
                         if !persistedUnresolvedForBatch.isEmpty {
                             showingReviewSheet = true
@@ -1190,6 +1241,7 @@ struct FolderChip: View {
 
 struct JokeRowView: View {
     let joke: Joke
+    @AppStorage("expandAllJokes") private var expandAllJokes = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -1207,7 +1259,7 @@ struct JokeRowView: View {
                 Text(joke.content)
                     .font(.system(size: 13))
                     .foregroundColor(AppTheme.Colors.textSecondary)
-                    .lineLimit(2)
+                    .lineLimit(expandAllJokes ? nil : 2)
 
                 HStack(spacing: 8) {
                     if let folder = joke.folder {
@@ -1299,6 +1351,7 @@ enum JokesViewMode: String, CaseIterable {
 
 struct JokeCardView: View {
     let joke: Joke
+    @AppStorage("expandAllJokes") private var expandAllJokes = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -1313,7 +1366,7 @@ struct JokeCardView: View {
             Text(joke.content)
                 .font(.system(size: 15))
                 .foregroundColor(AppTheme.Colors.textSecondary)
-                .lineLimit(5)
+                .lineLimit(expandAllJokes ? nil : 5)
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             Spacer(minLength: 0)

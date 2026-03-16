@@ -10,6 +10,8 @@ import SwiftData
 
 struct HitsView: View {
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("expandAllJokes") private var expandAllJokes = false
+    @AppStorage("roastModeEnabled") private var roastMode = false
     @Query(filter: #Predicate<Joke> { $0.isHit == true },
            sort: \Joke.dateCreated, order: .reverse)
     private var hitJokes: [Joke]
@@ -34,27 +36,31 @@ struct HitsView: View {
                         Circle()
                             .fill(
                                 RadialGradient(
-                                    colors: [Color.yellow.opacity(0.3), Color.yellow.opacity(0)],
+                                    colors: [roastMode ? AppTheme.Colors.roastAccent.opacity(0.3) : Color.yellow.opacity(0.3),
+                                             roastMode ? AppTheme.Colors.roastAccent.opacity(0) : Color.yellow.opacity(0)],
                                     center: .center,
                                     startRadius: 20,
                                     endRadius: 60
                                 )
                             )
                             .frame(width: 120, height: 120)
-                        Image(systemName: "star")
+                        Image(systemName: roastMode ? "flame" : "star")
                             .font(.system(size: 48))
                             .foregroundStyle(
-                                LinearGradient(colors: [.orange, .yellow],
+                                roastMode
+                                ? AppTheme.Colors.roastEmberGradient
+                                : LinearGradient(colors: [.orange, .yellow],
                                                startPoint: .top, endPoint: .bottom)
                             )
                     }
                     
                     VStack(spacing: 8) {
-                        Text("No Hits Yet")
+                        Text(roastMode ? "No Fire Hits Yet" : "No Hits Yet")
                             .font(.title3.bold())
+                            .foregroundColor(roastMode ? .white : .primary)
                         Text("Mark your best jokes as Hits from the joke detail page and they'll show up here.")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(roastMode ? .white.opacity(0.6) : .secondary)
                             .multilineTextAlignment(.center)
                     }
                 }
@@ -89,9 +95,22 @@ struct HitsView: View {
                 .scrollContentBackground(.hidden)
             }
         }
-        .navigationTitle("⭐ The Hits")
+        .background(roastMode ? AppTheme.Colors.roastBackground : Color.clear)
+        .navigationTitle(roastMode ? "🔥 The Hits" : "⭐ The Hits")
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(roastMode ? AppTheme.Colors.roastSurface : AppTheme.Colors.paperCream, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(roastMode ? .dark : .light, for: .navigationBar)
         .searchable(text: $searchText, prompt: "Search hits")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: { expandAllJokes.toggle() }) {
+                    Label(expandAllJokes ? "Collapse" : "Expand", systemImage: expandAllJokes ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left")
+                }
+                .foregroundColor(roastMode ? AppTheme.Colors.roastAccent : nil)
+            }
+        }
+        .tint(roastMode ? AppTheme.Colors.roastAccent : AppTheme.Colors.inkBlue)
     }
 }
 

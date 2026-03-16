@@ -60,7 +60,7 @@ RECORD TYPE CD_RoastTarget (
     CD_id STRING,
     CD_name STRING,
     CD_notes STRING,
-    CD_photoData BYTES,
+    CD_photoData ASSET,
     CD_dateCreated TIMESTAMP,
     CD_dateModified TIMESTAMP
 );

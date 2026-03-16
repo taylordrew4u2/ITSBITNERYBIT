@@ -2,7 +2,7 @@
 //  NotificationManager.swift
 //  thebitbinder
 //
-//  Snarky daily reminder notifications at a random time
+//  Daily reminder notifications at a random time
 //  within the user's configured window.
 //
 
@@ -43,14 +43,14 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
     // MARK: - Constants
 
     private enum Keys {
-        static let enabled = "snarkyNotificationsEnabled"
-        static let start   = "snarkyNotifStartMinute"
-        static let end     = "snarkyNotifEndMinute"
+        static let enabled = "dailyNotificationsEnabled"
+        static let start   = "dailyNotifStartMinute"
+        static let end     = "dailyNotifEndMinute"
     }
 
-    private let notifID = "com.thebitbinder.snarkyReminder"
+    private let notifID = "com.thebitbinder.dailyReminder"
 
-    static let snarkyMessages: [String] = [
+    static let reminderMessages: [String] = [
         "Stop working on your manifesto and get back to writing a new set",
         "Get up and go to the open mic. Or at least prep some jokes to try. You can't riff deal with it",
         "Someone just called you \"brave\" for doing stand up. go fix your tight five, hero.",
@@ -121,7 +121,7 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
     private func scheduleNext() {
         let content = UNMutableNotificationContent()
         content.title = "BitBinder"
-        content.body  = Self.snarkyMessages.randomElement() ?? "Write some jokes."
+        content.body  = Self.reminderMessages.randomElement() ?? "Write some jokes."
         content.sound = .default
 
         // Build trigger date: tomorrow at a random minute within the window

@@ -170,10 +170,15 @@ struct RecordRoastSetView: View {
     
     private func startRecording() {
         Task {
-            // Request microphone permission using continuation for broad iOS compatibility
-            let granted = await withCheckedContinuation { continuation in
-                AVAudioSession.sharedInstance().requestRecordPermission { allowed in
-                    continuation.resume(returning: allowed)
+            // Request microphone permission
+            let granted: Bool
+            if #available(iOS 17.0, *) {
+                granted = await AVAudioApplication.requestRecordPermission()
+            } else {
+                granted = await withCheckedContinuation { continuation in
+                    AVAudioSession.sharedInstance().requestRecordPermission { allowed in
+                        continuation.resume(returning: allowed)
+                    }
                 }
             }
             

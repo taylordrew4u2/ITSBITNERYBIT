@@ -2,7 +2,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class ImportBatch {
+final class ImportBatch: Identifiable {
     var id: UUID = UUID()
     var sourceFileName: String = ""
     var importTimestamp: Date = Date()
@@ -42,7 +42,7 @@ final class ImportBatch {
 }
 
 @Model
-final class ImportedJokeMetadata {
+final class ImportedJokeMetadata: Identifiable {
     var id: UUID = UUID()
     var jokeID: UUID?
     var title: String = ""
@@ -94,7 +94,7 @@ final class ImportedJokeMetadata {
 }
 
 @Model
-final class UnresolvedImportFragment {
+final class UnresolvedImportFragment: Identifiable {
     var id: UUID = UUID()
     var text: String = ""
     var normalizedText: String = ""

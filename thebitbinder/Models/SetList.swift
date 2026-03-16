@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class SetList {
+final class SetList: Identifiable {
     var id: UUID = UUID()
     var name: String = ""
     var dateCreated: Date = Date()

@@ -12,6 +12,7 @@ struct JokeDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var folders: [JokeFolder]
+    @AppStorage("roastModeEnabled") private var roastMode = false
     
     @Bindable var joke: Joke
     @State private var isEditing = false
@@ -31,22 +32,25 @@ struct JokeDetailView: View {
                         .font(.body)
                         .frame(minHeight: 200)
                         .padding(8)
-                        .background(Color(UIColor.systemGray6))
+                        .background(roastMode ? AppTheme.Colors.roastCard : Color(UIColor.systemGray6))
+                        .foregroundColor(roastMode ? .white : .primary)
                         .cornerRadius(8)
                 } else {
                     Text(joke.title)
                         .font(.title2)
                         .fontWeight(.bold)
+                        .foregroundColor(roastMode ? .white : .primary)
                     
                     Text(joke.content)
                         .font(.body)
+                        .foregroundColor(roastMode ? .white.opacity(0.9) : .primary)
                 }
                 
                 Divider()
                 
                 // The Hits Button - prominent at top of metadata
                 Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                    withAnimation(.easeOut(duration: 0.15)) {
                         joke.isHit.toggle()
                         joke.dateModified = Date()
                     }
@@ -56,23 +60,23 @@ struct JokeDetailView: View {
                             Circle()
                                 .fill(
                                     joke.isHit
-                                        ? LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing)
-                                        : LinearGradient(colors: [Color(.systemGray5), Color(.systemGray4)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                        ? (roastMode ? AppTheme.Colors.roastEmberGradient : LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        : LinearGradient(colors: [roastMode ? AppTheme.Colors.roastCard : Color(.systemGray5), roastMode ? AppTheme.Colors.roastSurface : Color(.systemGray4)], startPoint: .topLeading, endPoint: .bottomTrailing)
                                 )
                                 .frame(width: 44, height: 44)
                             
-                            Image(systemName: joke.isHit ? "star.fill" : "star")
+                            Image(systemName: roastMode ? (joke.isHit ? "flame.fill" : "flame") : (joke.isHit ? "star.fill" : "star"))
                                 .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(joke.isHit ? .white : .gray)
+                                .foregroundColor(joke.isHit ? .white : (roastMode ? .white.opacity(0.5) : .gray))
                         }
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text(joke.isHit ? "In The Hits!" : "Add to The Hits")
                                 .font(.headline)
-                                .foregroundColor(joke.isHit ? .orange : .primary)
+                                .foregroundColor(joke.isHit ? (roastMode ? AppTheme.Colors.roastAccent : .orange) : (roastMode ? .white : .primary))
                             Text(joke.isHit ? "This joke is perfected and ready" : "Mark as a perfected joke")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(roastMode ? .white.opacity(0.6) : .secondary)
                         }
                         
                         Spacer()
@@ -86,11 +90,11 @@ struct JokeDetailView: View {
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(joke.isHit ? Color.yellow.opacity(0.1) : Color(.systemGray6))
+                            .fill(joke.isHit ? (roastMode ? AppTheme.Colors.roastAccent.opacity(0.15) : Color.yellow.opacity(0.1)) : (roastMode ? AppTheme.Colors.roastCard : Color(.systemGray6)))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(joke.isHit ? Color.orange.opacity(0.3) : Color.clear, lineWidth: 1)
+                            .strokeBorder(joke.isHit ? (roastMode ? AppTheme.Colors.roastAccent.opacity(0.5) : Color.orange.opacity(0.3)) : Color.clear, lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -99,31 +103,36 @@ struct JokeDetailView: View {
                     HStack {
                         Label("Created", systemImage: "calendar")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(roastMode ? .white.opacity(0.6) : .secondary)
                         Spacer()
                         Text(joke.dateCreated, style: .date)
                             .font(.subheadline)
+                            .foregroundColor(roastMode ? .white : .primary)
                     }
                     
                     HStack {
                         Label("Folder", systemImage: "folder")
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(roastMode ? .white.opacity(0.6) : .secondary)
                         Spacer()
                         Button(action: { showingFolderPicker = true }) {
                             Text(joke.folder?.name ?? "None")
                                 .font(.subheadline)
-                                .foregroundColor(.blue)
+                                .foregroundColor(roastMode ? AppTheme.Colors.roastAccent : .blue)
                         }
                     }
                 }
                 .padding()
-                .background(Color(UIColor.systemGray6))
+                .background(roastMode ? AppTheme.Colors.roastCard : Color(UIColor.systemGray6))
                 .cornerRadius(10)
             }
             .padding()
         }
+        .background(roastMode ? AppTheme.Colors.roastBackground : Color.clear)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(roastMode ? AppTheme.Colors.roastSurface : AppTheme.Colors.paperCream, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarColorScheme(roastMode ? .dark : .light, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack(spacing: 12) {
@@ -133,6 +142,7 @@ struct JokeDetailView: View {
                         }
                         isEditing.toggle()
                     }
+                    .foregroundColor(roastMode ? AppTheme.Colors.roastAccent : nil)
                     
                     Button(role: .destructive) {
                         showingDeleteAlert = true
@@ -143,6 +153,7 @@ struct JokeDetailView: View {
                 }
             }
         }
+        .tint(roastMode ? AppTheme.Colors.roastAccent : AppTheme.Colors.inkBlue)
         .alert("Delete Joke", isPresented: $showingDeleteAlert) {
             Button("Delete", role: .destructive) {
                 modelContext.delete(joke)

@@ -174,7 +174,7 @@ struct MainTabView: View {
                     .ignoresSafeArea()
                     .onTapGesture {
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        withAnimation(.easeOut(duration: 0.2)) {
                             showMenu = false
                         }
                     }
@@ -198,7 +198,7 @@ struct MainTabView: View {
                     .overlay(alignment: .topLeading) {
                         if canGoBack {
                             Button {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                                withAnimation(.easeOut(duration: 0.2)) {
                                     goBack()
                                 }
                             } label: {
@@ -222,7 +222,7 @@ struct MainTabView: View {
                     .overlay(alignment: .topTrailing) {
                         Button {
                             dismissKeyboard()
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            withAnimation(.easeOut(duration: 0.25)) {
                                 showMenu = true
                             }
                         } label: {
@@ -280,7 +280,7 @@ struct ModernSideMenu: View {
                     ForEach(visibleScreens, id: \.self) { screen in
                         ModernMenuItem(screen: screen, isSelected: selectedScreen == screen) {
                             onNavigate(screen)
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            withAnimation(.easeOut(duration: 0.2)) {
                                 showMenu = false
                             }
                         }
@@ -291,11 +291,11 @@ struct ModernSideMenu: View {
                     
                     // BitBuddy AI Chat
                     Button {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        withAnimation(.easeOut(duration: 0.2)) {
                             showMenu = false
                         }
                         // Small delay so menu closes before sheet opens
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
                             showAIChat = true
                         }
                     } label: {
@@ -352,7 +352,7 @@ struct ModernSideMenu: View {
                     Spacer()
                     Button {
                         dismissKeyboard()
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { showMenu = false }
+                        withAnimation(.easeOut(duration: 0.2)) { showMenu = false }
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .semibold))
@@ -393,7 +393,7 @@ struct ModernSideMenu: View {
                     Spacer()
                     Button {
                         dismissKeyboard()
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { showMenu = false }
+                        withAnimation(.easeOut(duration: 0.2)) { showMenu = false }
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .semibold))

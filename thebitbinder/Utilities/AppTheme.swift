@@ -181,7 +181,8 @@ struct TouchReactiveStyle: ButtonStyle {
         configuration.label
             .scaleEffect(configuration.isPressed ? pressedScale : 1.0)
             .opacity(configuration.isPressed ? 0.85 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+            // Performance: Use faster, simpler animation
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
@@ -189,9 +190,10 @@ struct TouchReactiveStyle: ButtonStyle {
 struct FABButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
-            .brightness(configuration.isPressed ? 0.1 : 0)
-            .animation(.spring(response: 0.22, dampingFraction: 0.55), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.88 : 1.0)
+            .brightness(configuration.isPressed ? 0.08 : 0)
+            // Performance: Use faster animation for immediate feedback
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 
@@ -201,10 +203,11 @@ struct MenuItemStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1.0, anchor: .leading)
-            .offset(x: configuration.isPressed ? 4 : 0)
-            .opacity(configuration.isPressed ? 0.80 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1.0, anchor: .leading)
+            .offset(x: configuration.isPressed ? 2 : 0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            // Performance: Use faster animation
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 
@@ -212,8 +215,9 @@ struct MenuItemStyle: ButtonStyle {
 struct ChipStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.90 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.6), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            // Performance: Use faster animation
+            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
     }
 }
 

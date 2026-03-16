@@ -14,12 +14,14 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var jokes: [Joke]
     @Query private var recordings: [Recording]
+    @Query private var roastTargets: [RoastTarget]
     
     
     @State private var isExportingJokes = false
     @State private var isExportingAudio = false
     @State private var showExportOptions = false
     @State private var showAudioExportOptions = false
+    @State private var showRoastExportOptions = false
     @State private var exportedFileURL: URL?
     @State private var showShareSheet = false
     @State private var showSavedAlert = false
@@ -107,8 +109,8 @@ struct SettingsView: View {
                     Text("Automatically back up all your jokes, roasts, recordings, and photos to iCloud.")
                 }
                 
-                // MARK: - Snarky Notifications
-                SnarkyNotificationSection()
+                // MARK: - Daily Notifications
+                DailyNotificationSection()
                 
                 // MARK: - Export Jokes
                 Section {
@@ -147,6 +149,27 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(recordings.isEmpty)
+                    
+                    if roastMode {
+                        Button {
+                            showRoastExportOptions = true
+                        } label: {
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Export Roasts")
+                                        .foregroundColor(.primary)
+                                    let roastCount = roastTargets.reduce(0) { $0 + $1.jokeCount }
+                                    Text("\(roastTargets.count) targets · \(roastCount) roasts")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: "flame.fill")
+                                    .foregroundColor(AppTheme.Colors.roastAccent)
+                            }
+                        }
+                        .disabled(roastTargets.isEmpty)
+                    }
                 } header: {
                     Text("Export")
                 } footer: {
@@ -221,6 +244,21 @@ struct SettingsView: View {
             } message: {
                 Text("How would you like to export your \(recordings.count) audio files?")
             }
+            .confirmationDialog("Export Roasts", isPresented: $showRoastExportOptions) {
+                Button("Save PDF to Device") {
+                    exportRoastsAndSave()
+                }
+                Button("Send via Email") {
+                    exportRoastsAndEmail()
+                }
+                Button("Share...") {
+                    exportRoastsAndShare()
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                let roastCount = roastTargets.reduce(0) { $0 + $1.jokeCount }
+                Text("Export \(roastCount) roasts across \(roastTargets.count) targets as a PDF?")
+            }
             .alert("Saved", isPresented: $showSavedAlert) {
                 Button("OK") { }
             } message: {
@@ -278,6 +316,37 @@ struct SettingsView: View {
     
     private func exportJokesAndShare() {
         guard let url = PDFExportService.exportJokesToPDF(jokes: Array(jokes), fileName: "BitBinder_AllJokes") else { return }
+        exportedFileURL = url
+        showShareSheet = true
+    }
+    
+    // MARK: - Roast Export
+    
+    private func exportRoastsAndSave() {
+        guard let url = PDFExportService.exportRoastsToPDF(targets: Array(roastTargets), fileName: "BitBinder_Roasts") else { return }
+        savedAlertMessage = "Roast PDF saved to your device's Documents folder."
+        showSavedAlert = true
+        exportedFileURL = url
+    }
+    
+    private func exportRoastsAndEmail() {
+        guard let url = PDFExportService.exportRoastsToPDF(targets: Array(roastTargets), fileName: "BitBinder_Roasts") else { return }
+#if !targetEnvironment(macCatalyst)
+        if MFMailComposeViewController.canSendMail() {
+            mailAttachmentURL = url
+            mailSubject = "My BitBinder Roasts 🔥"
+            showMailComposer = true
+        } else {
+            showMailUnavailableAlert = true
+        }
+#else
+        exportedFileURL = url
+        showShareSheet = true
+#endif
+    }
+    
+    private func exportRoastsAndShare() {
+        guard let url = PDFExportService.exportRoastsToPDF(targets: Array(roastTargets), fileName: "BitBinder_Roasts") else { return }
         exportedFileURL = url
         showShareSheet = true
     }
@@ -524,9 +593,9 @@ struct ReorderLayoutView: View {
     }
 }
 
-// MARK: - Snarky Notification Settings
+// MARK: - Daily Notification Settings
 
-struct SnarkyNotificationSection: View {
+struct DailyNotificationSection: View {
     @ObservedObject private var manager = NotificationManager.shared
 
     // Convert minutes-from-midnight ↔ Date for the DatePicker
@@ -548,7 +617,7 @@ struct SnarkyNotificationSection: View {
             Toggle(isOn: $manager.isEnabled) {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Daily Snarky Reminder")
+                        Text("Daily Reminder")
                             .foregroundColor(.primary)
                         Text("A random roast to keep you writing")
                             .font(.caption)
@@ -568,7 +637,7 @@ struct SnarkyNotificationSection: View {
             Text("Notifications")
         } footer: {
             if manager.isEnabled {
-                Text("You'll get one snarky push notification per day at a random time between these hours.")
+                Text("You'll get one push notification per day at a random time between these hours.")
             }
         }
     }

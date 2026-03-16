@@ -6,6 +6,9 @@ struct HomeView: View {
     @AppStorage("roastModeEnabled") private var roastMode = false
     @StateObject private var syncService = iCloudSyncService.shared
     private let kvStore = iCloudKeyValueStore.shared
+    
+    // Performance: Debounce sync operations
+    @State private var syncDebounceTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -23,8 +26,14 @@ struct HomeView: View {
                     notepadText = kvStore.string(forKey: notepadKey) ?? ""
                 }
                 .onChange(of: notepadText) { _, v in
+                    // Save locally immediately
                     kvStore.set(v, forKey: notepadKey)
-                    Task {
+                    
+                    // Debounce iCloud sync - wait 1 second after user stops typing
+                    syncDebounceTask?.cancel()
+                    syncDebounceTask = Task {
+                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second debounce
+                        guard !Task.isCancelled else { return }
                         await syncService.syncThoughts(v)
                     }
                 }

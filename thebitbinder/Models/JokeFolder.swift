@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class JokeFolder {
+final class JokeFolder: Identifiable {
     var id: UUID = UUID()
     var name: String = ""
     var dateCreated: Date = Date()

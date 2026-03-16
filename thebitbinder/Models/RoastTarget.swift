@@ -11,15 +11,15 @@ import Foundation
 import SwiftData
 
 @Model
-final class RoastTarget {
+final class RoastTarget: Identifiable {
     var id: UUID = UUID()
     var name: String = ""
     var notes: String = ""
-    var photoData: Data?
+    @Attribute(.externalStorage) var photoData: Data?
     var dateCreated: Date = Date()
     var dateModified: Date = Date()
 
-    @Relationship(deleteRule: .cascade, inverse: \RoastJoke.target)
+    @Relationship(deleteRule: .cascade)
     var jokes: [RoastJoke]?
 
     /// Convenience: sorted jokes, newest first

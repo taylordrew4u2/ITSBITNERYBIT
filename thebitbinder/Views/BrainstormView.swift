@@ -226,7 +226,7 @@ struct BrainstormView: View {
                 }
             }
             .padding(16)
-            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: gridScale)
+            .animation(.easeOut(duration: 0.2), value: gridScale)
         }
     }
     

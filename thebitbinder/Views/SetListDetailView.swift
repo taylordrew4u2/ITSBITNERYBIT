@@ -14,6 +14,7 @@ struct SetListDetailView: View {
     @Query private var jokes: [Joke]
     @Query private var roastJokes: [RoastJoke]
     @AppStorage("roastModeEnabled") private var roastMode = false
+    @AppStorage("expandAllJokes") private var expandAllJokes = false
     
     @Bindable var setList: SetList
     @State private var showingAddJokes = false
@@ -157,6 +158,10 @@ struct SetListDetailView: View {
                         Label(roastMode ? "Add Roast Jokes" : "Add Jokes", systemImage: "plus")
                     }
                     
+                    Button(action: { expandAllJokes.toggle() }) {
+                        Label(expandAllJokes ? "Collapse Content" : "Expand Content", systemImage: expandAllJokes ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left")
+                    }
+                    
                     Button(action: { isEditing.toggle() }) {
                         Label(isEditing ? "Done" : "Edit Order", systemImage: "arrow.up.arrow.down")
                     }
@@ -273,7 +278,7 @@ struct SetListDetailView: View {
                 Text(joke.content)
                     .font(.system(size: 15))
                     .foregroundColor(.primary)
-                    .lineLimit(3)
+                    .lineLimit(expandAllJokes ? nil : 3)
                 
                 if let targetName = joke.target?.name {
                     Text("for \(targetName)")

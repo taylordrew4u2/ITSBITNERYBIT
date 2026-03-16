@@ -10,7 +10,7 @@ import SwiftData
 
 /// Unified chat message model used across all chat views
 @Model
-final class ChatMessage {
+final class ChatMessage: Identifiable {
     var id: UUID = UUID()
     var text: String = ""
     var isUser: Bool = false
