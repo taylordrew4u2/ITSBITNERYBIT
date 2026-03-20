@@ -73,13 +73,16 @@ final class iCloudKeyValueStore {
             object: cloud
         )
         
-        // Watch for ANY UserDefaults change and auto-push synced keys to iCloud
-        // This catches @AppStorage writes which bypass our set() methods
+        // Watch for UserDefaults.standard changes and auto-push synced keys to iCloud
+        // This catches @AppStorage writes which bypass our set() methods.
+        // NOTE: Must pass `object: local` (not nil) — passing nil observes ALL
+        // UserDefaults domains including app group suites, which triggers:
+        // "Using kCFPreferencesAnyUser with a container is only allowed for System Containers"
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(defaultsDidChange),
             name: UserDefaults.didChangeNotification,
-            object: nil
+            object: local
         )
         
         // Trigger initial sync from iCloud

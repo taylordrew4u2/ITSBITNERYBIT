@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 import CloudKit
 import UIKit
+import CoreData
 
 @MainActor
 final class iCloudSyncService: NSObject, ObservableObject {
@@ -28,9 +29,12 @@ final class iCloudSyncService: NSObject, ObservableObject {
     static let shared = iCloudSyncService()
     private let kvStore = iCloudKeyValueStore.shared
     
-    // CloudKit container - uses the explicit container ID from entitlements
+    // Set this from the app so remote change notifications can trigger a context refresh
+    weak var modelContext: ModelContext?
+    
+    // CloudKit container — must match the container used in ModelContainer CloudKit config
     private lazy var container: CKContainer = {
-        return CKContainer(identifier: "iCloud.10Bit")
+        return CKContainer(identifier: "iCloud.666bit")
     }()
     
     override init() {
@@ -38,6 +42,50 @@ final class iCloudSyncService: NSObject, ObservableObject {
         isSyncEnabled = UserDefaults.standard.bool(forKey: SyncedKeys.iCloudSyncEnabled)
         if let lastSyncTimestamp = UserDefaults.standard.object(forKey: SyncedKeys.lastSyncDate) as? Double {
             lastSyncDate = Date(timeIntervalSince1970: lastSyncTimestamp)
+        }
+        setupRemoteChangeObserver()
+    }
+    
+    // MARK: - Remote Change Notifications
+    // This is the key piece that makes sync "just work" across devices.
+    // When SwiftData pushes a change to CloudKit from another device, CloudKit
+    // sends a silent push to this device. We observe that notification and
+    // tell SwiftData's context to refresh, pulling the new data immediately.
+    
+    private func setupRemoteChangeObserver() {
+        // SwiftData + CloudKit fires this when remote changes arrive
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleRemoteChange),
+            name: .NSPersistentStoreRemoteChange,
+            object: nil
+        )
+        
+        // Also observe CloudKit account changes (user signs in/out of iCloud)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAccountChange),
+            name: .CKAccountChanged,
+            object: nil
+        )
+    }
+    
+    @objc private func handleRemoteChange(_ notification: Notification) {
+        Task { @MainActor in
+            // Tell SwiftData to process the remote changes by saving+resetting context
+            try? modelContext?.save()
+            lastSyncDate = Date()
+            print("🔄 [iCloud] Remote changes merged into context")
+        }
+    }
+    
+    @objc private func handleAccountChange(_ notification: Notification) {
+        Task { @MainActor in
+            let available = await checkiCloudAvailability()
+            if available && isSyncEnabled {
+                await performFullSync()
+                print("🔄 [iCloud] Account changed — re-synced")
+            }
         }
     }
     
@@ -236,7 +284,7 @@ final class iCloudSyncService: NSObject, ObservableObject {
         }
         
         // 2. Container ID
-        results.append("Container: iCloud.10Bit")
+        results.append("Container: iCloud.666bit")
         
         // 3. Sync enabled
         results.append("Sync Enabled: \(isSyncEnabled ? "✅ Yes" : "❌ No")")

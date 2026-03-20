@@ -4,6 +4,7 @@ import SwiftData
 @Model
 final class ImportBatch: Identifiable {
     var id: UUID = UUID()
+    var entityName: String = "ImportBatch"  // Required to match CD_entityName in CloudKit schema
     var sourceFileName: String = ""
     var importTimestamp: Date = Date()
     var totalSegments: Int = 0
@@ -56,6 +57,7 @@ final class ImportedJokeMetadata: Identifiable {
     var sourceFilename: String = ""
     var importTimestamp: Date = Date()
     
+    @Relationship(inverse: \ImportBatch.importedRecords)
     var batch: ImportBatch?
     
     var tags: [String] {
@@ -109,6 +111,7 @@ final class UnresolvedImportFragment: Identifiable {
     var createdAt: Date = Date()
     var isResolved: Bool = false
     
+    @Relationship(inverse: \ImportBatch.unresolvedFragments)
     var batch: ImportBatch?
     
     var tags: [String] {

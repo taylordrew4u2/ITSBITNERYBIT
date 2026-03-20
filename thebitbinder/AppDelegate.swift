@@ -6,28 +6,24 @@ import CloudKit
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        // Initialize memory manager early
         _ = MemoryManager.shared
-        
-        // Initialize iCloud key-value sync (pulls remote values into UserDefaults)
         _ = iCloudKeyValueStore.shared
         
-        // Set up daily notification manager as the UNUserNotificationCenter delegate
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
         NotificationManager.shared.scheduleIfNeeded()
         
-        // Register for remote notifications — required for CloudKit sync between devices
+        // Required for CloudKit silent push notifications between devices
         application.registerForRemoteNotifications()
         
-        // Verify iCloud account status
+        // Verify iCloud account using the correct container
         Task {
             do {
-                let status = try await CKContainer(identifier: "iCloud.10Bit").accountStatus()
+                let status = try await CKContainer(identifier: "iCloud.666bit").accountStatus()
                 switch status {
                 case .available:
                     print("✅ [CloudKit] iCloud account available — sync enabled")
                 case .noAccount:
-                    print("⚠️ [CloudKit] No iCloud account signed in — sync disabled")
+                    print("⚠️ [CloudKit] No iCloud account — sync disabled")
                 case .restricted:
                     print("⚠️ [CloudKit] iCloud restricted — sync disabled")
                 case .couldNotDetermine:
@@ -47,13 +43,41 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     
     // MARK: - Remote Notification Handling (CloudKit Sync)
     
-    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        print("✅ [CloudKit] Registered for remote notifications — sync will push/pull automatically")
+    func application(_ application: UIApplication,
+                     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        print("✅ [CloudKit] Registered for remote notifications")
     }
     
-    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+    func application(_ application: UIApplication,
+                     didFailToRegisterForRemoteNotificationsWithError error: Error) {
         print("⚠️ [CloudKit] Failed to register for remote notifications: \(error.localizedDescription)")
-        print("⚠️ [CloudKit] CloudKit sync may not trigger automatically between devices")
+    }
+    
+    // THIS IS THE KEY METHOD — CloudKit sends a silent push when another device
+    // writes data. We must call the completion handler with .newData so iOS knows
+    // we processed it, and post the NSPersistentStoreRemoteChange notification
+    // so SwiftData merges the incoming records into the local store immediately.
+    func application(_ application: UIApplication,
+                     didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+                     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        
+        // Let CloudKit process the notification (subscription-based record changes)
+        let notification = CKNotification(fromRemoteNotificationDictionary: userInfo)
+        
+        if notification?.notificationType == .recordZone ||
+           notification?.notificationType == .query ||
+           notification?.notificationType == .database {
+            // Trigger SwiftData to merge remote changes
+            NotificationCenter.default.post(
+                name: .NSPersistentStoreRemoteChange,
+                object: nil,
+                userInfo: userInfo
+            )
+            print("🔄 [CloudKit] Remote notification received — merging changes")
+            completionHandler(.newData)
+        } else {
+            completionHandler(.noData)
+        }
     }
     
     func applicationDidReceiveMemoryWarning(_ application: UIApplication) {

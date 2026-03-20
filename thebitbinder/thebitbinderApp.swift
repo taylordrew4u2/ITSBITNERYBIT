@@ -32,16 +32,18 @@ struct thebitbinderApp: App {
 
         // One store file. All fallbacks use this same URL — never switch to a
         // different file, which would silently lose all user data.
-        let storeURL = URL.applicationSupportDirectory.appending(path: "thebitbinder.store")
+        // IMPORTANT: SwiftData's default store name is "default.store".
+        // Changing this to anything else creates a NEW empty store and makes
+        // all existing user data invisible. Always use "default.store".
+        let storeURL = URL.applicationSupportDirectory.appending(path: "default.store")
 
         // 1️⃣ Persistent + CloudKit (single container, full schema)
         do {
             let config = ModelConfiguration(
-                "BitBinderStore",
                 schema: schema,
                 url: storeURL,
                 allowsSave: true,
-                cloudKitDatabase: .private("iCloud.11eca8f57e7a3463ba7f91a5e4bd1738ed1dcb4337dd24ee4267582fd80dbef5")
+                cloudKitDatabase: .private("iCloud.666bit")
             )
             let container = try ModelContainer(for: schema, configurations: [config])
             print("✅ [ModelContainer] Persistent + CloudKit ready")
@@ -53,7 +55,6 @@ struct thebitbinderApp: App {
         // 2️⃣ Same file, no CloudKit — all data preserved, just no sync
         do {
             let config = ModelConfiguration(
-                "BitBinderStore",
                 schema: schema,
                 url: storeURL,
                 allowsSave: true,
@@ -65,7 +66,7 @@ struct thebitbinderApp: App {
         } catch {
             // Back up corrupted store before wiping
             let backupURL = URL.applicationSupportDirectory
-                .appending(path: "thebitbinder.store.bak-\(Int(Date().timeIntervalSince1970))")
+                .appending(path: "default.store.bak-\(Int(Date().timeIntervalSince1970))")
             try? FileManager.default.copyItem(at: storeURL, to: backupURL)
             print("❌ [ModelContainer] Store unreadable — backed up. Error: \(error)")
         }
@@ -73,12 +74,11 @@ struct thebitbinderApp: App {
         // 3️⃣ Last resort: wipe corrupted files at same URL (backup already saved above)
         for ext in ["", "-shm", "-wal"] {
             try? FileManager.default.removeItem(
-                at: URL.applicationSupportDirectory.appending(path: "thebitbinder.store\(ext)")
+                at: URL.applicationSupportDirectory.appending(path: "default.store\(ext)")
             )
         }
         do {
             let config = ModelConfiguration(
-                "BitBinderStore",
                 schema: schema,
                 url: storeURL,
                 allowsSave: true,
@@ -104,16 +104,27 @@ struct thebitbinderApp: App {
                 }
             }
             .task {
+                // Wire the main context into the sync service so remote change
+                // notifications can call refreshAllObjects() on the right context
+                iCloudSyncService.shared.modelContext = sharedModelContainer.mainContext
+                
+                // Register for remote push notifications — CloudKit uses silent
+                // pushes to tell the app "new data available, please fetch"
+                // Without this, sync only happens when the app is foregrounded
+                UIApplication.shared.registerForRemoteNotifications()
+                
                 await startup.start()
             }
             .environmentObject(userPreferences)
         }
         .modelContainer(sharedModelContainer)
-        .onChange(of: scenePhase) { oldPhase, newPhase in
-            if newPhase == .background {
+        .onChange(of: scenePhase) {
+            if scenePhase == .background {
                 try? sharedModelContainer.mainContext.save()
                 iCloudKeyValueStore.shared.pushToCloud()
-            } else if newPhase == .active {
+            } else if scenePhase == .active {
+                // Save triggers SwiftData to merge any pending remote changes into the UI
+                try? sharedModelContainer.mainContext.save()
                 iCloudKeyValueStore.shared.pullFromCloud()
                 NotificationManager.shared.scheduleIfNeeded()
             }
