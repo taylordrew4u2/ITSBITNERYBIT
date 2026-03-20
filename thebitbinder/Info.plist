@@ -76,7 +76,9 @@
 		<key>iCloud.666bit</key>
 		<dict>
 			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
-			<false/>
+			<true/>
+			<key>NSUbiquitousContainerName</key>
+			<string>BitBinder</string>
 			<key>NSUbiquitousContainerSupportedFormats</key>
 			<array>
 				<string>public.data</string>
